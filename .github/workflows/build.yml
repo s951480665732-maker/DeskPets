@@ -11,13 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Find Gradle project
+      - name: Find Gradle project (unzip if needed)
         id: find
         run: |
           f=$(find . -name settings.gradle.kts -not -path '*/build/*' | head -n 1)
           if [ -z "$f" ]; then
-            echo "::error::settings.gradle.kts not found - project files are not uploaded"
-            exit 1
+            z=$(find . -maxdepth 2 -iname '*.zip' | head -n 1)
+            if [ -z "$z" ]; then
+              echo "::error::No project files and no .zip found in the repository"
+              exit 1
+            fi
+            mkdir -p "$RUNNER_TEMP/proj"
+            unzip -q "$z" -d "$RUNNER_TEMP/proj"
+            f=$(find "$RUNNER_TEMP/proj" -name settings.gradle.kts -not -path '*/build/*' | head -n 1)
+            if [ -z "$f" ]; then
+              echo "::error::settings.gradle.kts not found inside the zip"
+              exit 1
+            fi
           fi
           echo "dir=$(dirname "$f")" >> "$GITHUB_OUTPUT"
 
